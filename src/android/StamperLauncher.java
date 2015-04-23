@@ -352,7 +352,7 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	        }
 	        
 			jsonObj.put("coords",coords);
-			jsonObj.put("timestamp", location.getTime() != 0 ? location.getTime() : System.currentTimeMillis());
+			jsonObj.put("timestamp", location.getTime());
 			
 			return jsonObj;
 			
