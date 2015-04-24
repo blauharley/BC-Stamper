@@ -45,8 +45,6 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	private LocationListener locationListenerGPS;
 	private LocationListener locationListenerNetwork;
 	private LocationListener locationListenerPassive;
-	private boolean allComplete = false;
-	private boolean timerResponseSent = false;
 	
 	private Location locGPS = null;
 	private long startTimeMilliGPS;
@@ -60,6 +58,7 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	private Location locBest = null;
 	private long startTimeMilliBest;
 	private long endTimeMilliBest;
+	private boolean firstLocationUpdate = true;
 	
 	private Handler serviceHandler = null;
 	
@@ -70,58 +69,14 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	private boolean isGPSAvailable = false;
 	private GpsStatus gpsStatus = null;
 	
+	private int locationTimerTimeout = 1000*3;
+	
 	private Activity thisAct;
 	private CallbackContext callCtx;
 	
 	class timer implements Runnable {
           public void run() {
-          	
-          	if(!allComplete){
-			
-				allComplete = true;
-				
-				providerStatus = LocationProvider.OUT_OF_SERVICE;
-	          		
-	      		JSONObject gps;
-	      		
-	      		if(locGPS == null){
-	      			gps = getProviderResponseByLocation(new Location(getBestProvider()),"gps");
-	      		}
-	      		else{
-	      			gps = getProviderResponseByLocation(locGPS,"gps");
-	      		}
-	      		
-	      		JSONObject net;
-	      		
-	      		if(locNetwork == null){
-	      			net = getProviderResponseByLocation(new Location(getBestProvider()),"net");
-	      		}
-	      		else{
-	      			net = getProviderResponseByLocation(locNetwork,"net");
-	      		}
-	      		
-	      		JSONObject passive;
-		      		
-	      		if(locPassive == null){
-	      			passive = getProviderResponseByLocation(new Location(getBestProvider()),"passive");
-	      		}
-	      		else{
-	      			passive = getProviderResponseByLocation(locPassive,"passive");
-	      		}
-	      		
-	      		JSONObject best;
-	      		
-	      		if(locBest == null){
-	      			best = getProviderResponseByLocation(new Location(getBestProvider()),"best");
-	      		}
-	      		else{
-	      			best = getProviderResponseByLocation(locBest,"best");
-	      		}
-	      		
-				sendInfoResponse(gps, net, passive, best);
-				
-			}
-          	
+          	onProviderLocationChanged();
           }
     }
     
@@ -169,6 +124,50 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
         
 	}
 	
+	private void onProviderLocationChanged(){
+		
+		providerStatus = LocationProvider.OUT_OF_SERVICE;
+	    
+  		JSONObject gps;
+  		
+  		if(locGPS == null){
+  			gps = getProviderResponseByLocation(new Location(getBestProvider()),"gps");
+  		}
+  		else{
+  			gps = getProviderResponseByLocation(locGPS,"gps");
+  		}
+  		
+  		JSONObject net;
+  		
+  		if(locNetwork == null){
+  			net = getProviderResponseByLocation(new Location(getBestProvider()),"net");
+  		}
+  		else{
+  			net = getProviderResponseByLocation(locNetwork,"net");
+  		}
+  		
+  		JSONObject passive;
+      		
+  		if(locPassive == null){
+  			passive = getProviderResponseByLocation(new Location(getBestProvider()),"passive");
+  		}
+  		else{
+  			passive = getProviderResponseByLocation(locPassive,"passive");
+  		}
+  		
+  		JSONObject best;
+  		
+  		if(locBest == null){
+  			best = getProviderResponseByLocation(new Location(getBestProvider()),"best");
+  		}
+  		else{
+  			best = getProviderResponseByLocation(locBest,"best");
+  		}
+  		
+		sendInfoResponse(gps, net, passive, best);
+			
+	}
+	
 	private void requestLocationAccurancy(){
 		
 		if(locationManager != null){
@@ -194,7 +193,12 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 				lastGPSLocation = location;
 				lastGPSLocationMillis = System.currentTimeMillis();
 				endTimeMilliGPS = System.currentTimeMillis();
-				onProviderLocationChanged(location);
+				
+				if(firstLocationUpdate){
+					firstLocationUpdate = false;
+					onProviderLocationChanged();
+				}
+				
 	        }
 	    };
 	    
@@ -215,7 +219,12 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	        public void onLocationChanged(Location location) {
 				locNetwork = location;
 				endTimeMilliNetwork = System.currentTimeMillis();
-				onProviderLocationChanged(location);
+				
+				if(firstLocationUpdate){
+					firstLocationUpdate = false;
+					onProviderLocationChanged();
+				}
+				
 	        }
 	    };
 	 
@@ -237,7 +246,12 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	        public void onLocationChanged(Location location) {
 				locPassive = location;
 				endTimeMilliPassive = System.currentTimeMillis();
-				onProviderLocationChanged(location);
+				
+				if(firstLocationUpdate){
+					firstLocationUpdate = false;
+					onProviderLocationChanged();
+				}
+				
 	        }
 	    };
     	
@@ -258,10 +272,9 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 			locationManager.requestLocationUpdates(getBestProvider(), interval, 0,this);
             locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, interval, 0,locationListenerPassive);
             
-	        /*
 			serviceHandler = new Handler();
-	        serviceHandler.postDelayed( new timer(),warmUpTime);
-	        */
+        	serviceHandler.postDelayed( new timer(),interval+locationTimerTimeout);
+        
 	        lastGPSLocation = null;
 	        isGPSAvailable = false;
 	        providerEnabled = false;
@@ -295,15 +308,12 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 			r.setKeepCallback(true);
 			
 			callCtx.sendPluginResult(r);
-			/*
+			
 			serviceHandler.removeCallbacksAndMessages(null);
 			
 			serviceHandler = new Handler();
-	        serviceHandler.postDelayed( new timer(),warmUpTime);
-	        */
-			allComplete = false;
-			timerResponseSent = false;
-			
+	        serviceHandler.postDelayed( new timer(),interval+locationTimerTimeout);
+	        
 		}
 		catch (JSONException e){
 			callCtx.sendPluginResult(new PluginResult(PluginResult.Status.JSON_EXCEPTION));
@@ -330,15 +340,12 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	        }
 	        else if(type == "net"){
 	        	coords.put("endtime", endTimeMilliNetwork);
-	        	coords.put("gps_fix", isGPSAvailable);
 	        }
 	        else if(type == "passive"){
 	        	coords.put("endtime", endTimeMilliPassive);
-	        	coords.put("gps_fix", isGPSAvailable);
 	        }
 	        else if(type == "best"){
 	        	coords.put("endtime", endTimeMilliBest);
-	        	coords.put("gps_fix", isGPSAvailable);
 	        }
 	        
 	        if(location.hasBearing()){
@@ -372,56 +379,6 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
         locationManager.removeUpdates(locationListenerPassive);
 	}
 	
-	public void onProviderLocationChanged(Location location) {
-		
-		if(!allComplete){
-			
-			allComplete = true;
-			
-			providerStatus = LocationProvider.OUT_OF_SERVICE;
-          		
-      		JSONObject gps;
-      		
-      		if(locGPS == null){
-      			gps = getProviderResponseByLocation(new Location(getBestProvider()),"gps");
-      		}
-      		else{
-      			gps = getProviderResponseByLocation(locGPS,"gps");
-      		}
-      		
-      		JSONObject net;
-      		
-      		if(locNetwork == null){
-      			net = getProviderResponseByLocation(new Location(getBestProvider()),"net");
-      		}
-      		else{
-      			net = getProviderResponseByLocation(locNetwork,"net");
-      		}
-      		
-      		JSONObject passive;
-	      		
-      		if(locPassive == null){
-      			passive = getProviderResponseByLocation(new Location(getBestProvider()),"passive");
-      		}
-      		else{
-      			passive = getProviderResponseByLocation(locPassive,"passive");
-      		}
-      		
-      		JSONObject best;
-      		
-      		if(locBest == null){
-      			best = getProviderResponseByLocation(new Location(getBestProvider()),"best");
-      		}
-      		else{
-      			best = getProviderResponseByLocation(locBest,"best");
-      		}
-      		
-			sendInfoResponse(gps, net, passive, best);
-			
-		}
-		
-	}
-	
 	@Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
 		providerStatus = status;
@@ -442,7 +399,12 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
     public void onLocationChanged(Location location) {
 		locBest = location;
 		endTimeMilliBest = System.currentTimeMillis();
-		onProviderLocationChanged(location);
+		
+		if(firstLocationUpdate){
+			firstLocationUpdate = false;
+			onProviderLocationChanged();
+		}
+		
     }
     
     public void onGpsStatusChanged(int event) {
