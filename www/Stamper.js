@@ -46,7 +46,7 @@ module.exports = {
      }
      */
     requestProvider : function (successCallback, errorCallback, options) {
-        var interval = options.interval ? options.interval : 60000;
+        var interval = options.interval ? options.interval : new Error('no interval');
         exec(successCallback, errorCallback, "Stamper", "request", [interval]);
     }
 
