@@ -46,18 +46,17 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	private LocationListener locationListenerNetwork;
 	private LocationListener locationListenerPassive;
 	
+	private long startTimeMilli;
+	
 	private Location locGPS = null;
 	private long startTimeMilliGPS;
-	private long endTimeMilliGPS;
+	private long updatedTimeMilliGPS;
 	private Location locNetwork = null;
-	private long startTimeMilliNetwork;
-	private long endTimeMilliNetwork;
+	private long updatedTimeMilliNetwork;
 	private Location locPassive = null;
-	private long startTimeMilliPassive;
-	private long endTimeMilliPassive;
+	private long updatedTimeMilliPassive;
 	private Location locBest = null;
-	private long startTimeMilliBest;
-	private long endTimeMilliBest;
+	private long updatedTimeMilliBest;
 	private boolean firstLocationUpdate = true;
 	
 	private Handler serviceHandler = null;
@@ -128,6 +127,8 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 		
 		providerStatus = LocationProvider.OUT_OF_SERVICE;
 	    
+	    startTimeMilli = System.currentTimeMillis();
+	    
   		JSONObject gps;
   		
   		if(locGPS == null){
@@ -192,7 +193,7 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 				locGPS = location;
 				lastGPSLocation = location;
 				lastGPSLocationMillis = System.currentTimeMillis();
-				endTimeMilliGPS = System.currentTimeMillis();
+				updatedTimeMilliGPS = lastGPSLocationMillis;
 				
 				if(firstLocationUpdate){
 					firstLocationUpdate = false;
@@ -218,7 +219,7 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	        @Override
 	        public void onLocationChanged(Location location) {
 				locNetwork = location;
-				endTimeMilliNetwork = System.currentTimeMillis();
+				updatedTimeMilliNetwork = System.currentTimeMillis();
 				
 				if(firstLocationUpdate){
 					firstLocationUpdate = false;
@@ -245,7 +246,7 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	        @Override
 	        public void onLocationChanged(Location location) {
 				locPassive = location;
-				endTimeMilliPassive = System.currentTimeMillis();
+				updatedTimeMilliPassive = System.currentTimeMillis();
 				
 				if(firstLocationUpdate){
 					firstLocationUpdate = false;
@@ -334,18 +335,20 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	        
 	        coords.put("accurancy", location.getAccuracy());
 	        
+	        coords.put("starttime", startTimeMilli);
+	        
 	        if(type == "gps"){
-	        	coords.put("endtime", endTimeMilliGPS);
+	        	coords.put("endtime", updatedTimeMilliGPS);
 	        	coords.put("gps_fix", isGPSAvailable);
 	        }
 	        else if(type == "net"){
-	        	coords.put("endtime", endTimeMilliNetwork);
+	        	coords.put("endtime", updatedTimeMilliNetwork);
 	        }
 	        else if(type == "passive"){
-	        	coords.put("endtime", endTimeMilliPassive);
+	        	coords.put("endtime", updatedTimeMilliPassive);
 	        }
 	        else if(type == "best"){
-	        	coords.put("endtime", endTimeMilliBest);
+	        	coords.put("endtime", updatedTimeMilliBest);
 	        }
 	        
 	        if(location.hasBearing()){
@@ -398,7 +401,7 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
     @Override
     public void onLocationChanged(Location location) {
 		locBest = location;
-		endTimeMilliBest = System.currentTimeMillis();
+		updatedTimeMilliBest = System.currentTimeMillis();
 		
 		if(firstLocationUpdate){
 			firstLocationUpdate = false;
