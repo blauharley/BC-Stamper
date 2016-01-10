@@ -70,6 +70,8 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	
 	private int locationTimerTimeout = 1000*3;
 	
+	private boolean providerDisabledByUser = false;
+	
 	private Activity thisAct;
 	private CallbackContext callCtx;
 	
@@ -124,6 +126,44 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	}
 	
 	private void onProviderLocationChanged(){
+		
+		if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) && 
+		   !locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER )){
+		
+			providerDisabledByUser = true;
+			
+			PluginResult r = new PluginResult(PluginResult.Status.ERROR,"provider is not enabled");
+			r.setKeepCallback(true);
+			callCtx.sendPluginResult(r);
+			
+			serviceHandler = new Handler();
+			serviceHandler.removeCallbacksAndMessages(null);
+			
+			serviceHandler = new Handler();
+	        serviceHandler.postDelayed( new timer(),interval+locationTimerTimeout);
+	        
+	        return;
+	        
+		}
+		
+		if(providerDisabledByUser && 
+		  (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || 
+		   locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER )) ){
+		   
+			providerDisabledByUser = false;
+			
+			if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+				locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, interval, 0,locationListenerGPS);
+				locationManager.addGpsStatusListener(this);
+			}
+			
+			if(locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER )){
+				locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, interval, 0,locationListenerNetwork);
+			}
+			
+			return;
+			
+		}
 		
 		providerStatus = LocationProvider.OUT_OF_SERVICE;
 	    
@@ -210,10 +250,12 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	
 	        @Override
 	        public void onProviderEnabled(String provider) {
+	        	providerDisabledByUser = false;
 	        }
 	
 	        @Override
 	        public void onProviderDisabled(String provider) {
+	        	providerDisabledByUser = true;
 	        }
 	
 	        @Override
@@ -270,6 +312,8 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 		if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || 
 		   locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER )){
 			
+			providerDisabledByUser = false;
+			
 			locationManager.requestLocationUpdates(getBestProvider(), interval, 0,this);
             locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, interval, 0,locationListenerPassive);
             
@@ -284,9 +328,18 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 		}
 		else{
 			
+			providerDisabledByUser = true;
+			
 			PluginResult r = new PluginResult(PluginResult.Status.ERROR,"provider is not enabled");
+			r.setKeepCallback(true);
 			callCtx.sendPluginResult(r);
 			
+			serviceHandler = new Handler();
+			serviceHandler.removeCallbacksAndMessages(null);
+			
+			serviceHandler = new Handler();
+	        serviceHandler.postDelayed( new timer(),interval+locationTimerTimeout);
+	        
 		}
 		
 	}
