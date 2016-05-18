@@ -48,6 +48,10 @@ module.exports = {
     requestProvider : function (successCallback, errorCallback, options) {
         var interval = options.interval ? options.interval : new Error('no interval');
         exec(successCallback, errorCallback, "Stamper", "request", [interval]);
+    },
+
+    stopService: function(successCallback, errorCallback){
+        exec(successCallback, errorCallback, "Stamper", "stop", []);
     }
 
 };

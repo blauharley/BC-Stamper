@@ -35,6 +35,7 @@ import java.util.Iterator;
 public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener, LocationListener, ProviderInterface{
 
 	public static final String ACTION_REQUEST_PROVIDER = "request";
+	public static final String ACTION_STOP_SERVICE = "stop";
 	
 	private long interval;
 	
@@ -71,13 +72,14 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 	private int locationTimerTimeout = 1000*3;
 	
 	private boolean providerDisabledByUser = false;
+	private boolean isServiceStopped = false;
 	
 	private Activity thisAct;
 	private CallbackContext callCtx;
 	
 	class timer implements Runnable {
           public void run() {
-          	onProviderLocationChanged();
+          	if(!isServiceStopped)onProviderLocationChanged();
           }
     }
     
@@ -97,6 +99,13 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 				r.setKeepCallback(true);
 				callbackContext.sendPluginResult(r);
 				requestLocationAccurancy();
+				return true;
+			}
+			else if(ACTION_STOP_SERVICE.equalsIgnoreCase(action)){
+				stopService();
+				JSONObject jsonObj = new JSONObject();
+				jsonObj.put("service stopped",true);
+				callbackContext.success(jsonObj);
 				return true;
 			}
 			else{
@@ -125,6 +134,15 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
         
 	}
 	
+	private void stopService(){
+		
+		if(locationManager != null){
+			removeLocationListeners();
+			isServiceStopped = true;
+		}
+		
+	}
+	
 	private void onProviderLocationChanged(){
 		
 		if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) && 
@@ -140,7 +158,7 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 			serviceHandler.removeCallbacksAndMessages(null);
 			
 			serviceHandler = new Handler();
-	        serviceHandler.postDelayed( new timer(),interval+locationTimerTimeout);
+	        serviceHandler.postDelayed( new timer(),interval);
 	        
 	        return;
 	        
@@ -214,6 +232,8 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 		if(locationManager != null){
 			removeLocationListeners();
 		}
+		
+		isServiceStopped = false;
 		
 		locationListenerGPS = new LocationListener() {
 	        @Override
@@ -318,7 +338,7 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
             locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, interval, 0,locationListenerPassive);
             
 			serviceHandler = new Handler();
-        	serviceHandler.postDelayed( new timer(),interval+locationTimerTimeout);
+        	serviceHandler.postDelayed( new timer(),interval);
         
 	        lastGPSLocation = null;
 	        isGPSAvailable = false;
@@ -338,7 +358,7 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 			serviceHandler.removeCallbacksAndMessages(null);
 			
 			serviceHandler = new Handler();
-	        serviceHandler.postDelayed( new timer(),interval+locationTimerTimeout);
+	        serviceHandler.postDelayed( new timer(),interval);
 	        
 		}
 		
@@ -366,7 +386,7 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 			serviceHandler.removeCallbacksAndMessages(null);
 			
 			serviceHandler = new Handler();
-	        serviceHandler.postDelayed( new timer(),interval+locationTimerTimeout);
+	        serviceHandler.postDelayed( new timer(),interval);
 	        
 		}
 		catch (JSONException e){
