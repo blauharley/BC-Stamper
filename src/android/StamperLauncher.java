@@ -154,9 +154,10 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 			r.setKeepCallback(true);
 			callCtx.sendPluginResult(r);
 			
-			serviceHandler = new Handler();
-			serviceHandler.removeCallbacksAndMessages(null);
-			
+			if(serviceHandler != null){
+            	serviceHandler.removeCallbacksAndMessages(null);
+            }
+            
 			serviceHandler = new Handler();
 	        serviceHandler.postDelayed( new timer(),interval);
 	        
@@ -337,6 +338,10 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 			locationManager.requestLocationUpdates(getBestProvider(), interval, 0,this);
             locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, interval, 0,locationListenerPassive);
             
+            if(serviceHandler != null){
+            	serviceHandler.removeCallbacksAndMessages(null);
+            }
+            
 			serviceHandler = new Handler();
         	serviceHandler.postDelayed( new timer(),interval);
         
@@ -354,9 +359,10 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 			r.setKeepCallback(true);
 			callCtx.sendPluginResult(r);
 			
-			serviceHandler = new Handler();
-			serviceHandler.removeCallbacksAndMessages(null);
-			
+			if(serviceHandler != null){
+            	serviceHandler.removeCallbacksAndMessages(null);
+            }
+            
 			serviceHandler = new Handler();
 	        serviceHandler.postDelayed( new timer(),interval);
 	        
@@ -383,8 +389,10 @@ public class StamperLauncher extends CordovaPlugin implements GpsStatus.Listener
 			
 			callCtx.sendPluginResult(r);
 			
-			serviceHandler.removeCallbacksAndMessages(null);
-			
+			if(serviceHandler != null){
+            	serviceHandler.removeCallbacksAndMessages(null);
+            }
+            
 			serviceHandler = new Handler();
 	        serviceHandler.postDelayed( new timer(),interval);
 	        
